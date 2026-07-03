@@ -1,69 +1,37 @@
-# OKX 加密货币异动监控器
+# OKX Crypto Monitor
 
-实时监控OKX交易所U本位永续合约的5分钟涨跌幅，发现异常波动时通过Telegram推送。
+Monitor OKX USDT perpetual contracts for 5-minute price swings >= 5%.
+Alerts sent to Telegram in ~12 seconds for all 394 contracts.
 
-## 功能
+## Quick Start
 
-- **并发扫描** — 秒级扫描394个U本位合约的5分钟K线
-- **异动推送** — 5分钟涨跌幅≥5%的币种实时推送到Telegram
-- **精确触发** — 每小时 `:00 / :05 / :10` 三次快检，覆盖整点前后关键窗口
-- **持续运行** — 通过 OpenClaw cron 定时器托管，无需额外服务
-
-## 快速开始
-
-### 1. 配置 TG Bot
+1. Create a Telegram Bot via @BotFather, get your token
+2. Get your chat ID (send a message to your bot, check https://api.telegram.org/bot<TOKEN>/getUpdates)
+3. Configure credentials:
 
 ```bash
-# 在 Telegram 中
-1. 搜索 @BotFather，发送 /newbot 创建 Bot
-2. 获取 Bot Token（如: 123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11）
-3. 搜索你的 Bot 发一条消息
-4. 访问 https://api.telegram.org/bot<TOKEN>/getUpdates 获取 chat_id
+# Option A: Environment variables (recommended for cron)
+export TG_BOT_TOKEN="your_token"
+export TG_CHAT_ID="your_chat_id"
+
+# Option B: Config file
+cp config.example.toml config.toml
+# Edit config.toml with your credentials
 ```
 
-### 2. 配置脚本
+4. Run: `python okx_5min_quick.py`
 
-编辑 `okx_5min_quick.py`，替换配置：
-
-```python
-TG_BOT_TOKEN = "你的BotToken"
-TG_CHAT_ID = "你的ChatID"
-CHANGE_THRESHOLD = 5.0   # 涨跌幅阈值（%）
-```
-
-### 3. 手动运行测试
+## Deploy with Cron
 
 ```bash
-python okx_5min_quick.py
+openclaw cron add --name "OKX Monitor" --cron "0,5,10 * * * *" --session isolated --message "TG_BOT_TOKEN=xxx TG_CHAT_ID=xxx python okx_5min_quick.py"
 ```
 
-### 4. 部署定时任务（OpenClaw）
+## Files
 
-```bash
-# 每整点运行
-openclaw cron add --name "OKX :00 快检" --cron "0 * * * *" --session isolated --message "python okx_5min_quick.py"
-
-openclaw cron add --name "OKX :05 快检" --cron "5 * * * *" --session isolated --message "python okx_5min_quick.py"
-
-openclaw cron add --name "OKX :10 快检" --cron "10 * * * *" --session isolated --message "python okx_5min_quick.py"
-```
-
-## 技术细节
-
-| 项目 | 说明 |
-|------|------|
-| **数据源** | OKX V5 API (`/api/v5/market/candles`, `/api/v5/market/tickers`) |
-| **K线周期** | 5分钟 (bar=5m) |
-| **并发方式** | `ThreadPoolExecutor` (20线程) |
-| **扫描速度** | 394个合约约12秒 |
-| **推送** | Telegram Bot API (Parse Mode: HTML) |
-
-## 文件结构
-
-```
-├── okx_5min_quick.py    # 主脚本（并发扫描+TG推送）
-└── README.md            # 本文件
-```
+- `okx_5min_quick.py` - Main scanner (20 threads, ~12s scan)
+- `config.example.toml` - Configuration template
+- `README.md` - This file
 
 ## License
 
